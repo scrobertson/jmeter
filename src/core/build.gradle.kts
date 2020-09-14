@@ -19,6 +19,10 @@ plugins {
     id("com.github.vlsi.ide")
 }
 
+repositories {
+    mavenCentral()
+}
+
 dependencies {
     api(project(":src:launcher"))
     api(project(":src:jorphan"))
@@ -66,6 +70,8 @@ dependencies {
         }
     }
 
+    implementation("org.apache.httpcomponents:httpclient:4.5.12")
+    implementation("org.apache.httpcomponents:httpcore:4.4.13")
     implementation("com.fasterxml.jackson.core:jackson-annotations")
     implementation("com.fasterxml.jackson.core:jackson-core")
     implementation("com.fasterxml.jackson.core:jackson-databind")

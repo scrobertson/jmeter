@@ -18,6 +18,7 @@
 package org.apache.jmeter.reporters;
 
 import java.io.Serializable;
+import java.net.URISyntaxException;
 import java.text.DecimalFormat;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -86,6 +87,14 @@ public class Summariser extends AbstractTestElement
                     "summariser.ignore_transaction_controller_sample_result", //$NON-NLS-1$
                     true);
 
+    /** Write Results to Influx **/
+    private static boolean TOINFLUX = JMeterUtils.getPropDefault("summariser.influx.out.enabled", false);
+    private InfluxMetricSender influxDB;
+    private InfluxMetricCollector influxSampleCollector;
+
+    /** Jenkins project Directory **/
+    private static String project_Directory = JMeterUtils.getPropDefault("project.directory", "Error");
+
     /*
      * Ensure that a report is not skipped if we are slightly late in checking
      * the time.
@@ -115,6 +124,8 @@ public class Summariser extends AbstractTestElement
     // Name of the accumulator. Set up by testStarted().
     private transient String myName;
 
+    private TestTimes time = new TestTimes();
+
     /*
      * Constructor is initially called once for each occurrence in the test plan.
      * For GUI, several more instances are created.
@@ -124,9 +135,20 @@ public class Summariser extends AbstractTestElement
      */
     public Summariser() {
         super();
+        this.myTotals = null;
+        this.influxDB = null;
+        this.influxSampleCollector = null;
         synchronized (LOCK) {
             ACCUMULATORS.clear();
             instanceCount=0;
+        }
+        if (TOINFLUX) {
+            try {
+                this.influxDB = new InfluxMetricSender();
+                this.influxSampleCollector = new InfluxMetricCollector(this.influxDB.getProject(), this.influxDB.getSuite());
+            } catch (URISyntaxException var3) {
+                TOINFLUX = false;
+            }
         }
     }
 
@@ -181,7 +203,7 @@ public class Summariser extends AbstractTestElement
         SummariserRunningSample myDelta = null;
         SummariserRunningSample myTotal = null;
         boolean reportNow = false;
-
+        String lineProtocol = null;
         /*
          * Have we reached the reporting boundary?
          * Need to allow for a margin of error, otherwise can miss the slot.
@@ -191,6 +213,9 @@ public class Summariser extends AbstractTestElement
         synchronized (myTotals) {
             if (s != null) {
                 myTotals.delta.addSample(s);
+                if (TOINFLUX) {
+                    this.influxSampleCollector.addSample(s);
+                }
             }
 
             if ((now > myTotals.last + INTERVAL_WINDOW) && (now % INTERVAL <= INTERVAL_WINDOW)) {
@@ -202,14 +227,25 @@ public class Summariser extends AbstractTestElement
                 myTotal = new SummariserRunningSample(myTotals.total);
 
                 myTotals.last = now; // stop double-reporting
+                if (TOINFLUX) {
+                    lineProtocol = this.influxSampleCollector.getLineProtocol();
+                }
             }
         }
         if (reportNow) {
             formatAndWriteToLog(myName, myDelta, "+");
 
+            if (TOINFLUX) {
+                this.influxDB.sendIntervalMetric(myDelta);
+                this.influxDB.sendSampleMetric(lineProtocol);
+            }
+
             // Only if we have updated them
             if (myTotal != null && myDelta != null &&myTotal.getNumSamples() != myDelta.getNumSamples()) { // NOSONAR
                 formatAndWriteToLog(myName, myTotal, "=");
+                if (TOINFLUX) {
+                    this.influxDB.sendTotalMetric(myTotal);
+                }
             }
         }
     }
@@ -316,6 +352,14 @@ public class Summariser extends AbstractTestElement
             }
             total.moveDelta(); // This will update the total endTime
             formatAndWriteToLog(name, total.total, "=");
+
+            if (TOINFLUX) {
+                this.influxDB.sendTotalMetric(total.total);
+                String lineProtocol = this.influxSampleCollector.getLineProtocol();
+                this.influxDB.sendSampleMetric(lineProtocol);
+
+                this.influxDB.shutDown();
+            }
         }
     }
 
