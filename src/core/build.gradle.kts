@@ -24,6 +24,11 @@ repositories {
 }
 
 dependencies {
+
+    implementation("kg.apc:cmdrunner:2.2")
+
+    compileOnly(fileTree(mapOf("dir" to "C:\\Users\\Administrator\\IdeaProjects\\jmeter\\lib\\ext", "include" to listOf("spec.perf-1.0-SNAPSHOT.jar"))))
+
     api(project(":src:launcher"))
     api(project(":src:jorphan"))
     testImplementation(project(":src:jorphan", "testClasses"))

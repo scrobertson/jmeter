@@ -40,6 +40,9 @@ import org.apache.jorphan.util.JOrphanUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import kg.apc.cmd.UniversalRunner;
+import reporter.InfluxBuilder;
+
 /**
  * Generate a summary of the test run so far to the log file and/or standard
  * output. Both running and differential totals are shown. Output is generated
@@ -91,9 +94,6 @@ public class Summariser extends AbstractTestElement
     private static boolean TOINFLUX = JMeterUtils.getPropDefault("summariser.influx.out.enabled", false);
     private InfluxMetricSender influxDB;
     private InfluxMetricCollector influxSampleCollector;
-
-    /** Jenkins project Directory **/
-    private static String project_Directory = JMeterUtils.getPropDefault("project.directory", "Error");
 
     /*
      * Ensure that a report is not skipped if we are slightly late in checking
@@ -321,6 +321,7 @@ public class Summariser extends AbstractTestElement
             }
             instanceCount++;
         }
+        if (TOINFLUX) { JMeterUtils.setProperty("test.startTime", time.currentTimeMills()); }
     }
 
     /**
@@ -354,9 +355,31 @@ public class Summariser extends AbstractTestElement
             formatAndWriteToLog(name, total.total, "=");
 
             if (TOINFLUX) {
+                JMeterUtils.setProperty("test.endTime", time.currentTimeMills());
                 this.influxDB.sendTotalMetric(total.total);
                 String lineProtocol = this.influxSampleCollector.getLineProtocol();
                 this.influxDB.sendSampleMetric(lineProtocol);
+
+                String resultsDirectory = JMeterUtils.getProperty("results.directory");
+                String aggregateFile = "Aggregated_Data.csv";
+                String logFile = JMeterUtils.getProperty("results.logFile");
+                int rampUpTime = Integer.parseInt(JMeterUtils.getPropDefault("load.rampUp", "Not Found"));
+                int testDuration = Integer.parseInt(JMeterUtils.getPropDefault("load.loadDuration", "Not Found"));
+                int rampDownStartTime = rampUpTime + testDuration;
+
+                String[] arr = {"--generate-csv", "--tool", "Reporter",
+                        resultsDirectory + aggregateFile,
+                        "--input-jtl", resultsDirectory + logFile,
+                        "--plugin-type", "AggregateReport",
+                        "--start-offset", Integer.toString(rampUpTime),
+                        "--end-offset", Integer.toString(rampDownStartTime)};
+
+                try {
+                    UniversalRunner.main(arr);
+                    new InfluxBuilder();
+                } catch (Throwable throwable) {
+                    throwable.printStackTrace();
+                }
 
                 this.influxDB.shutDown();
             }
