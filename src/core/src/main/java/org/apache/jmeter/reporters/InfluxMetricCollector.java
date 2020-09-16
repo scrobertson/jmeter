@@ -17,10 +17,13 @@
 
 package org.apache.jmeter.reporters;
 
+import org.apache.jmeter.control.TransactionController;
 import org.apache.jmeter.samplers.SampleResult;
 import org.apache.jmeter.samplers.Sampler;
 import org.apache.jmeter.threads.JMeterContextService;
 import org.apache.jmeter.util.JMeterUtils;
+
+import java.util.Arrays;
 
 class InfluxMetricCollector {
     private final StringBuilder samples;
@@ -54,19 +57,30 @@ class InfluxMetricCollector {
         sb.append(",duration=").append(result.getTime());
         sb.append(",latency=").append(result.getLatency());
         sb.append(",bytes=").append(result.getBytesAsLong());
-
         if(!result.isSuccessful()) {
             if(ERRPRSTOINFLUX) {
-                Sampler sampler;
-                sb.append(",errormessage=").append(this.influxStrConvertor(result.getResponseDataAsString()));
                 sb.append(",errorresponsecode=").append(this.escapeResponceCode(result.getResponseCode()));
-                sb.append(",requestbody=").append(this.influxStrConvertor(result.getSamplerData()));
+                if(TransactionController.isFromTransactionController(result)) {
+
+                    for (SampleResult subResult : result.getSubResults()){
+                        if (!subResult.isSuccessful()){
+                            sb.append(",errormessage=").append(this.influxStrConvertor(subResult.getResponseDataAsString()));
+                            sb.append(",requestbody=").append(this.influxStrConvertor(subResult.getSamplerData()));
+                            break;
+                        }
+
+                    }
+                }
+                else{
+                    sb.append(",errormessage=").append(this.influxStrConvertor(result.getResponseDataAsString()));
+                    sb.append(",requestbody=").append(this.influxStrConvertor(result.getSamplerData()));
+                }
+
             }
         }
 
         sb.append(" ").append(result.getTimeStamp()).append("000000");
         sb.append("\n");
-
         this.samples.append(sb.toString());
     }
 
