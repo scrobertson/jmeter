@@ -27,7 +27,7 @@ dependencies {
 
     implementation("kg.apc:cmdrunner:2.2")
 
-    compileOnly(fileTree(mapOf("dir" to "C:\\Users\\Administrator\\IdeaProjects\\jmeter\\lib\\ext", "include" to listOf("spec.perf-1.0-SNAPSHOT.jar"))))
+    compileOnly(fileTree(mapOf("dir" to "C:\\Users\\Administrator\\Documents\\GitHub\\jmeterAggregated\\jmeterReporting-2.0\\target\\", "include" to listOf("spec.perf-1.0-SNAPSHOT.jar"))))
 
     api(project(":src:launcher"))
     api(project(":src:jorphan"))

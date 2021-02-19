@@ -17,13 +17,11 @@
 
 package org.apache.jmeter.reporters;
 
+
 import org.apache.jmeter.control.TransactionController;
 import org.apache.jmeter.samplers.SampleResult;
-import org.apache.jmeter.samplers.Sampler;
 import org.apache.jmeter.threads.JMeterContextService;
 import org.apache.jmeter.util.JMeterUtils;
-
-import java.util.Arrays;
 
 class InfluxMetricCollector {
     private final StringBuilder samples;

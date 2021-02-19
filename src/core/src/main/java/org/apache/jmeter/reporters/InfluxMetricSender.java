@@ -21,9 +21,9 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.text.DecimalFormat;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.concurrent.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.jmeter.threads.JMeterContextService;
 import org.apache.jmeter.threads.JMeterContextService.ThreadCounts;
@@ -51,15 +51,12 @@ class InfluxMetricSender {
     private static TagHttpClient tagClient;
     private static ExecutorService executorService;
 
-
-
     public InfluxMetricSender() throws URISyntaxException {
         if (TOINFLUX) {
             String fullHost = INFLUX_URL + "/api/v2/write?org=" + INFLUX_ORG + "&" + "bucket=" + INFLUX_BUCKET;
             tagClient = new TagHttpClient(INFLUX_CONNECTION_TIMEOUT, INFLUX_REQUEST_TIMEOUT, INFLUX_SOCKET_TIMEOUT, new URI(fullHost));
         }
 
-        //executorService = Executors.newFixedThreadPool(5);
         executorService = Executors.newSingleThreadExecutor();
         this.DF = new DecimalFormat("0.00");
     }
@@ -88,8 +85,6 @@ class InfluxMetricSender {
         }
 
     }
-
-
 
     public void sendSampleMetric(String lineProtocol) {
         if (tagClient.isOpen() && lineProtocol.length() > 0) {
