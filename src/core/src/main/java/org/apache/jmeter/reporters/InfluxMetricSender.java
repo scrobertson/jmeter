@@ -21,9 +21,9 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.text.DecimalFormat;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.concurrent.*;
 
 import org.apache.jmeter.threads.JMeterContextService;
 import org.apache.jmeter.threads.JMeterContextService.ThreadCounts;
@@ -35,12 +35,14 @@ class InfluxMetricSender {
     private static final Logger log = LoggerFactory.getLogger(InfluxMetricSender.class);
     private static final boolean TOINFLUX = JMeterUtils.getPropDefault("summariser.influx.out.enabled", false);
     private static final boolean INFLUX_LOG_ENABLED = JMeterUtils.getPropDefault("summariser.influx.log.enabled", false);
-    private static final String INFLUX_URL = JMeterUtils.getPropDefault("summariser.influx.url", "http://localhost:8086/write?db=jmeter");
+    private static final String INFLUX_URL = JMeterUtils.getPropDefault("report.influx.host", "http://localhost:8086");
+    private static final String INFLUX_ORG = JMeterUtils.getPropDefault("report.influx.org", "jmeterOrg");
+    private static final String INFLUX_BUCKET = JMeterUtils.getPropDefault("report.influx.bucket", "jmeterBucket");
     private static final int INFLUX_CONNECTION_TIMEOUT = JMeterUtils.getPropDefault("summariser.influx.connection.timeout", 5000);
     private static final int INFLUX_SOCKET_TIMEOUT = JMeterUtils.getPropDefault("summariser.influx.socket.timeout", 5000);
     private static final int INFLUX_REQUEST_TIMEOUT = JMeterUtils.getPropDefault("summariser.influx.request.timeout", 5000);
-    private static final String INFLUX_APPLICATION = JMeterUtils.getPropDefault("summariser.influx.application", "testAutomationGuru");
-    private static final String INFLUX_TEST_SUITE = JMeterUtils.getPropDefault("summariser.influx.application.suite", "testAutomationGuru");
+    private static final String INFLUX_APPLICATION = JMeterUtils.getPropDefault("summariser.influx.application", "myApp");
+    private static final String INFLUX_TEST_SUITE = JMeterUtils.getPropDefault("summariser.influx.application.suite", "load-test");
     private static final String DELTA_MEASUREMENT = "delta,";
     private static final String TOTAL_MEASUREMENT = "total,";
     private static final String DECIMAL_FORMAT = "0.00";
@@ -49,12 +51,16 @@ class InfluxMetricSender {
     private static TagHttpClient tagClient;
     private static ExecutorService executorService;
 
+
+
     public InfluxMetricSender() throws URISyntaxException {
         if (TOINFLUX) {
-            tagClient = new TagHttpClient(INFLUX_CONNECTION_TIMEOUT, INFLUX_REQUEST_TIMEOUT, INFLUX_SOCKET_TIMEOUT, new URI(INFLUX_URL));
+            String fullHost = INFLUX_URL + "/api/v2/write?org=" + INFLUX_ORG + "&" + "bucket=" + INFLUX_BUCKET;
+            tagClient = new TagHttpClient(INFLUX_CONNECTION_TIMEOUT, INFLUX_REQUEST_TIMEOUT, INFLUX_SOCKET_TIMEOUT, new URI(fullHost));
         }
 
-        executorService = Executors.newFixedThreadPool(5);
+        //executorService = Executors.newFixedThreadPool(5);
+        executorService = Executors.newSingleThreadExecutor();
         this.DF = new DecimalFormat("0.00");
     }
 
@@ -65,6 +71,7 @@ class InfluxMetricSender {
     public String getSuite() {
         return INFLUX_TEST_SUITE;
     }
+
 
     public void sendIntervalMetric(SummariserRunningSample summariserRunningSample) {
         if (tagClient.isOpen()) {
@@ -81,6 +88,8 @@ class InfluxMetricSender {
         }
 
     }
+
+
 
     public void sendSampleMetric(String lineProtocol) {
         if (tagClient.isOpen() && lineProtocol.length() > 0) {

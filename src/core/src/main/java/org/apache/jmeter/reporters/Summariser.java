@@ -361,8 +361,8 @@ public class Summariser extends AbstractTestElement
                 this.influxDB.sendSampleMetric(lineProtocol);
 
                 String resultsDirectory = JMeterUtils.getProperty("results.directory");
-                String aggregateFile = "Aggregated_Data.csv";
-                String logFile = JMeterUtils.getProperty("results.logFile");
+                String aggregateFile = JMeterUtils.getPropDefault("results.aggregatedFile", "Aggregated_Data.csv");
+                String logFile = JMeterUtils.getProperty("results.csvFile");
                 int rampUpTime = Integer.parseInt(JMeterUtils.getPropDefault("load.rampUp", "Not Found"));
                 int testDuration = Integer.parseInt(JMeterUtils.getPropDefault("load.loadDuration", "Not Found"));
                 int rampDownStartTime = rampUpTime + testDuration;

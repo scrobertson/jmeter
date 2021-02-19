@@ -25,6 +25,7 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
+import org.apache.jmeter.util.JMeterUtils;
 
 public class TagHttpClient {
     PoolingHttpClientConnectionManager connManager = new PoolingHttpClientConnectionManager();
@@ -41,6 +42,7 @@ public class TagHttpClient {
         this.httpPost = new HttpPost();
         this.httpPost.setURI(influxURI);
         this.httpPost.setHeader("Content-type", "application/x-www-form-urlencoded; charset=UTF-8");
+        this.httpPost.setHeader("Authorization", "Token " + JMeterUtils.getProperty("influx.token"));
         this.isEnabled = true;
     }
 
